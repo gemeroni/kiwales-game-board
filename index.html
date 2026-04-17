@@ -613,6 +613,15 @@ function buildGroups() {
     const roundName = `Round ${m[1].padStart(2, '0')}`;
     if (!roundGroups[roundName]) roundGroups[roundName] = [];
     roundGroups[roundName].push(rec);
+
+    // Populate rival from Games lookup field if not already set from Schedule
+    const oppArr = rec.fields[F.opponent];
+    const opp = Array.isArray(oppArr) ? oppArr[0] : (oppArr || '');
+    if (opp && scheduleMap[roundName] && !scheduleMap[roundName].rival) {
+      scheduleMap[roundName].rival = opp;
+    } else if (opp && !scheduleMap[roundName]) {
+      scheduleMap[roundName] = { rival: opp, date: '', court: '' };
+    }
   }
 }
 
