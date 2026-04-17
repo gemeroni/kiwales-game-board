@@ -147,7 +147,7 @@
       flex: 1;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding: 12px 12px 24px;
+      padding: 12px 12px calc(120px + env(safe-area-inset-bottom));
     }
 
     .grid {
@@ -375,7 +375,7 @@
     /* ── Toast ───────────────────────────────────────────────── */
     .toast {
       position: fixed;
-      bottom: 90px; left: 50%;
+      bottom: 140px; left: 50%;
       transform: translateX(-50%) translateY(12px);
       background: #1f2937; color: white;
       padding: 9px 20px; border-radius: 100px;
@@ -386,6 +386,87 @@
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .toast.err  { background: #dc2626; }
+
+    /* ── Bucket Bar ──────────────────────────────────────────── */
+    .bucket-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--navy-dark);
+      border-top: 1px solid rgba(255,255,255,0.14);
+      z-index: 30;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .q-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 8px 12px 0;
+    }
+
+    .q-tab {
+      flex: 1;
+      padding: 7px 4px;
+      background: rgba(255,255,255,0.08);
+      border: none;
+      border-radius: 7px;
+      color: rgba(255,255,255,0.55);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: background 0.12s, color 0.12s;
+    }
+    .q-tab.active {
+      background: var(--gold);
+      color: var(--navy-dark);
+    }
+
+    .bucket-cards {
+      display: flex;
+      gap: 7px;
+      padding: 8px 12px 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      align-items: center;
+      scrollbar-width: none;
+      min-height: 0;
+      transition: min-height 0.15s;
+    }
+    .bucket-cards.open { min-height: 64px; }
+    .bucket-cards::-webkit-scrollbar { display: none; }
+
+    .bucket-empty {
+      color: rgba(255,255,255,0.3);
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .bucket-card {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 52px;
+      height: 44px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      border: 2px solid;
+      flex-shrink: 0;
+      letter-spacing: 0.02em;
+      transition: transform 0.1s, box-shadow 0.1s;
+      user-select: none;
+    }
+    .bucket-card:active { transform: scale(0.93); }
+    .bucket-card.picked {
+      box-shadow: 0 0 0 3px #fff, 0 0 0 5px rgba(255,255,255,0.3);
+      transform: translateY(-4px) scale(1.05);
+    }
+
+    /* Player rows become obvious tap targets when a card is picked */
+    .pick-mode tbody tr:not(.is-absent) { cursor: pointer; }
+    .pick-mode tbody tr:not(.is-absent):active { background: rgba(26,58,92,0.07); }
   </style>
 </head>
 <body>
@@ -429,7 +510,7 @@
       <thead>
         <tr>
           <th>Player</th>
-          <th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th>
+          <th id="qh-Q1">Q1</th><th id="qh-Q2">Q2</th><th id="qh-Q3">Q3</th><th id="qh-Q4">Q4</th>
         </tr>
       </thead>
       <tbody id="grid-body">
@@ -437,6 +518,17 @@
       </tbody>
     </table>
   </div>
+</div>
+
+<!-- ── Bucket Bar ────────────────────────────────────────────── -->
+<div class="bucket-bar" id="bucket-bar">
+  <div class="q-tabs">
+    <button class="q-tab" id="qtab-Q1" onclick="openBucketQ('Q1')">Q1</button>
+    <button class="q-tab" id="qtab-Q2" onclick="openBucketQ('Q2')">Q2</button>
+    <button class="q-tab" id="qtab-Q3" onclick="openBucketQ('Q3')">Q3</button>
+    <button class="q-tab" id="qtab-Q4" onclick="openBucketQ('Q4')">Q4</button>
+  </div>
+  <div class="bucket-cards" id="bucket-cards"></div>
 </div>
 
 <!-- ── Bottom Sheet (position picker) ────────────────────────── -->
@@ -513,15 +605,17 @@ const QF = { Q1: F.q1, Q2: F.q2, Q3: F.q3, Q4: F.q4 };
 const POSITIONS = ['GK','GD','WD','C','WA','GA','GS','Sub'];
 
 // ─── State ─────────────────────────────────────────────────────
-let token          = null;
-let allRecords     = [];
-let scheduleMap    = {};   // "Round 02" -> { rival, date, court, homeAway, teamDuty, dutyFamilyIds, fruitFamilyIds }
-let participantsMap = {};  // recId -> "First Last"
-let roundGroups    = {};
-let activeRound    = null;
-let editRec        = null;
-let editQ          = null;
-let plrRec         = null;
+let token           = null;
+let allRecords      = [];
+let scheduleMap     = {};   // "Round 02" -> { rival, date, court, homeAway, teamDuty, dutyFamilyIds, fruitFamilyIds }
+let participantsMap = {};   // recId -> "First Last"
+let roundGroups     = {};
+let activeRound     = null;
+let editRec         = null;
+let editQ           = null;
+let plrRec          = null;
+let activeBucketQ   = null;
+let pickedPosition  = null;
 
 // ─── Auth ───────────────────────────────────────────────────────
 function saveToken() {
@@ -720,6 +814,10 @@ function onRoundChange(roundName) {
   if (fruit) dutyParts.push(`Fruit Duty: ${fruit}`);
   document.getElementById('round-duty').textContent = dutyParts.join(' · ');
 
+  pickedPosition = null;
+  updatePickMode();
+  updateQTabs();
+  refreshBucket();
   renderGrid(roundGroups[roundName] || []);
 }
 
@@ -805,8 +903,98 @@ function cell(rec, q, pos, absent) {
   return `<span class="empty-cell" onclick="openPosSheet('${rec.id}','${q}')">+</span>`;
 }
 
+// ─── Bucket ─────────────────────────────────────────────────────
+function openBucketQ(q) {
+  activeBucketQ  = activeBucketQ === q ? null : q;
+  pickedPosition = null;
+  updateQTabs();
+  refreshBucket();
+  updatePickMode();
+}
+
+function updateQTabs() {
+  ['Q1','Q2','Q3','Q4'].forEach(q => {
+    document.getElementById(`qtab-${q}`).classList.toggle('active', q === activeBucketQ);
+    });
+}
+
+function getUnassignedPositions(q) {
+  if (!activeRound || !q) return [];
+  const fieldId = QF[q];
+  const records = roundGroups[activeRound] || [];
+  const used = new Set(records.map(r => r.fields[fieldId]).filter(Boolean));
+  // Sub can be assigned to multiple players - always keep it available
+  return POSITIONS.filter(p => p === 'Sub' || !used.has(p));
+}
+
+function refreshBucket() {
+  const el = document.getElementById('bucket-cards');
+  if (!activeBucketQ) {
+    el.innerHTML = '';
+    el.classList.remove('open');
+    return;
+  }
+  el.classList.add('open');
+  const unassigned = getUnassignedPositions(activeBucketQ);
+  if (!unassigned.length) {
+    el.innerHTML = `<span class="bucket-empty">All positions assigned</span>`;
+    return;
+  }
+  el.innerHTML = unassigned.map(p =>
+    `<div class="bucket-card pos-opt-${p}${pickedPosition === p ? ' picked' : ''}"
+      onclick="pickCard('${p}')">${p}</div>`
+  ).join('');
+}
+
+function pickCard(pos) {
+  pickedPosition = pickedPosition === pos ? null : pos;
+  refreshBucket();
+  updatePickMode();
+  updateQTabs();
+}
+
+function updatePickMode() {
+  document.getElementById('grid').classList.toggle('pick-mode', !!pickedPosition);
+}
+
+async function assignFromBucket(recId) {
+  if (!pickedPosition || !activeBucketQ) return;
+  const pos     = pickedPosition;
+  const q       = activeBucketQ;
+  const fieldId = QF[q];
+
+  // Clear pick immediately for snappy feel
+  pickedPosition = null;
+  updatePickMode();
+  updateQTabs();
+
+  const rec  = allRecords.find(r => r.id === recId);
+  if (!rec) return;
+  const prev = rec.fields[fieldId] || null;
+
+  rec.fields[fieldId] = pos;
+  renderGrid(roundGroups[activeRound] || []);
+  refreshBucket();
+
+  try {
+    await apiFetch(G_TABLE, `/${recId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ fields: { [fieldId]: pos } }),
+    });
+    toast(`${pos} → ${playerLabel(rec)}`);
+  } catch (err) {
+    if (prev) rec.fields[fieldId] = prev;
+    else delete rec.fields[fieldId];
+    renderGrid(roundGroups[activeRound] || []);
+    refreshBucket();
+    toast('Save failed', true);
+    console.error(err);
+  }
+}
+
 // ─── Position Sheet ─────────────────────────────────────────────
 function openPosSheet(recId, q) {
+  if (pickedPosition && q === activeBucketQ) { assignFromBucket(recId); return; }
   editRec = allRecords.find(r => r.id === recId);
   editQ   = q;
   const cur = editRec.fields[QF[q]] || null;
@@ -859,6 +1047,7 @@ async function savePosition(pos) {
 
 // ─── Player Sheet ────────────────────────────────────────────────
 function openPlrSheet(recId) {
+  if (pickedPosition) { assignFromBucket(recId); return; }
   plrRec = allRecords.find(r => r.id === recId);
   const absent  = !!plrRec.fields[F.absent];
   const notes   = plrRec.fields[F.notes] || '';
