@@ -569,8 +569,8 @@ async function loadAll() {
     populateSelector();
     autoSelectRound();
   } catch (e) {
-    setLoading(false);
-    toast('Could not load data. Check your token.', true);
+    const msg = e.message.includes('401') ? 'Invalid token - check your Airtable Personal Access Token.' : `Load failed: ${e.message}`;
+    showError(msg);
     console.error(e);
   }
 }
@@ -627,10 +627,19 @@ function onRoundChange(roundName) {
 
 // ─── Grid ───────────────────────────────────────────────────────
 function setLoading(on) {
-  if (on) {
-    document.getElementById('grid-body').innerHTML =
-      `<tr><td colspan="5" class="loading-cell"><div class="spinner"></div>Loading...</td></tr>`;
-  }
+  document.getElementById('grid-body').innerHTML = on
+    ? `<tr><td colspan="5" class="loading-cell"><div class="spinner"></div>Loading...</td></tr>`
+    : '';
+}
+
+function showError(msg) {
+  document.getElementById('grid-body').innerHTML =
+    `<tr><td colspan="5" class="loading-cell">
+      <div style="font-size:28px;margin-bottom:10px">⚠️</div>
+      <div style="color:var(--text);font-weight:600;margin-bottom:6px">${esc(msg)}</div>
+      <button onclick="loadAll()" style="margin-top:10px;padding:10px 22px;background:var(--navy);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Retry</button>
+      <button onclick="showDisconnect()" style="margin-top:10px;margin-left:8px;padding:10px 22px;background:var(--bg);color:var(--muted);border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Change token</button>
+    </td></tr>`;
 }
 
 function playerLabel(rec) {
