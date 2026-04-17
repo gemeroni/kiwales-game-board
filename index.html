@@ -171,6 +171,10 @@
       text-align: center;
     }
     .grid thead th:first-child { text-align: left; padding-left: 14px; width: 30%; }
+    .grid thead th.q-header { cursor: pointer; }
+    .grid thead th.q-header:active { background: rgba(255,255,255,0.25); }
+    .grid thead th.q-header.bucket-active { background: var(--gold); color: var(--navy-dark); }
+    .pos-opt.is-used { opacity: 0.28; cursor: not-allowed; pointer-events: none; }
 
     .grid tbody tr { border-bottom: 1px solid var(--border); }
     .grid tbody tr:last-child { border-bottom: none; }
@@ -510,7 +514,10 @@
       <thead>
         <tr>
           <th>Player</th>
-          <th id="qh-Q1">Q1</th><th id="qh-Q2">Q2</th><th id="qh-Q3">Q3</th><th id="qh-Q4">Q4</th>
+          <th id="qh-Q1" class="q-header" onclick="openBucketQ('Q1')">Q1</th>
+          <th id="qh-Q2" class="q-header" onclick="openBucketQ('Q2')">Q2</th>
+          <th id="qh-Q3" class="q-header" onclick="openBucketQ('Q3')">Q3</th>
+          <th id="qh-Q4" class="q-header" onclick="openBucketQ('Q4')">Q4</th>
         </tr>
       </thead>
       <tbody id="grid-body">
@@ -915,7 +922,9 @@ function openBucketQ(q) {
 function updateQTabs() {
   ['Q1','Q2','Q3','Q4'].forEach(q => {
     document.getElementById(`qtab-${q}`).classList.toggle('active', q === activeBucketQ);
-    });
+    const th = document.getElementById(`qh-${q}`);
+    if (th) th.classList.toggle('bucket-active', q === activeBucketQ);
+  });
 }
 
 function getUnassignedPositions(q) {
@@ -1002,10 +1011,19 @@ function openPosSheet(recId, q) {
   document.getElementById('ps-player').textContent  = playerLabel(editRec);
   document.getElementById('ps-quarter').textContent = `Quarter ${q.slice(1)}`;
 
-  document.getElementById('ps-picker').innerHTML = POSITIONS.map(p =>
-    `<div class="pos-opt pos-opt-${p}${cur === p ? ' is-current' : ''}"
-      onclick="savePosition('${p}')">${p}</div>`
-  ).join('');
+  // Positions already held by other players this quarter
+  const usedByOthers = new Set(
+    (roundGroups[activeRound] || [])
+      .filter(r => r.id !== editRec.id)
+      .map(r => r.fields[QF[editQ]])
+      .filter(Boolean)
+  );
+
+  document.getElementById('ps-picker').innerHTML = POSITIONS.map(p => {
+    const taken = p !== 'Sub' && usedByOthers.has(p) && cur !== p;
+    return `<div class="pos-opt pos-opt-${p}${cur === p ? ' is-current' : ''}${taken ? ' is-used' : ''}"
+      onclick="${taken ? '' : `savePosition('${p}')`}">${p}</div>`;
+  }).join('');
 
   document.getElementById('pos-overlay').classList.add('active');
 }
