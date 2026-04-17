@@ -509,19 +509,33 @@ function showDisconnect() {
 
 // ─── API ────────────────────────────────────────────────────────
 async function apiFetch(table, path = '', opts = {}) {
-  const res = await fetch(`${API}/${table}${path}`, {
-    ...opts,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(opts.headers || {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`${res.status}: ${body}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${API}/${table}${path}`, {
+      ...opts,
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(opts.headers || {}),
+      },
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      let hint = '';
+      if (res.status === 401) hint = 'Invalid token.';
+      else if (res.status === 403) hint = 'Token missing required scopes or base access.';
+      else if (res.status === 404) hint = 'Base or table not found.';
+      throw new Error(`${hint || ''} (HTTP ${res.status})`);
+    }
+    return res.json();
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Request timed out - check your internet connection.');
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json();
 }
 
 function qp(fields) {
@@ -532,7 +546,7 @@ function qp(fields) {
 async function fetchAllPages(table, fields) {
   let records = [], offset = null;
   do {
-    let url = `?${qp(fields)}&pageSize=100`;
+    let url = `?${qp(fields)}&returnFieldsByFieldId=true&pageSize=100`;
     if (offset) url += `&offset=${offset}`;
     const data = await apiFetch(table, url);
     records = records.concat(data.records);
@@ -578,9 +592,10 @@ async function loadAll() {
 function buildGroups() {
   roundGroups = {};
   for (const rec of allRecords) {
-    const links = rec.fields[F.round];
-    if (!links?.length) continue;
-    const roundName = links[0].name; // "Round 02"
+    const raw = rec.fields[F.playerRound] || '';
+    const m = raw.match(/^R(\d+)/);
+    if (!m) continue;
+    const roundName = `Round ${m[1].padStart(2, '0')}`;
     if (!roundGroups[roundName]) roundGroups[roundName] = [];
     roundGroups[roundName].push(rec);
   }
@@ -666,10 +681,10 @@ function renderGrid(records) {
     const absent  = !!rec.fields[F.absent];
     const name    = playerLabel(rec);
     const hasNote = !!(rec.fields[F.notes] || '').trim();
-    const q1 = rec.fields[F.q1]?.name || null;
-    const q2 = rec.fields[F.q2]?.name || null;
-    const q3 = rec.fields[F.q3]?.name || null;
-    const q4 = rec.fields[F.q4]?.name || null;
+    const q1 = rec.fields[F.q1] || null;
+    const q2 = rec.fields[F.q2] || null;
+    const q3 = rec.fields[F.q3] || null;
+    const q4 = rec.fields[F.q4] || null;
 
     return `<tr class="${absent ? 'is-absent' : ''}" data-id="${rec.id}">
       <td class="td-name">
@@ -703,7 +718,7 @@ function cell(rec, q, pos, absent) {
 function openPosSheet(recId, q) {
   editRec = allRecords.find(r => r.id === recId);
   editQ   = q;
-  const cur = editRec.fields[QF[q]]?.name || null;
+  const cur = editRec.fields[QF[q]] || null;
 
   document.getElementById('ps-player').textContent  = playerLabel(editRec);
   document.getElementById('ps-quarter').textContent = `Quarter ${q.slice(1)}`;
@@ -728,10 +743,10 @@ async function savePosition(pos) {
 
   const recId   = editRec.id;
   const fieldId = QF[editQ];
-  const prev    = editRec.fields[fieldId]?.name || null;
+  const prev    = editRec.fields[fieldId] || null;
 
   // Optimistic update
-  if (pos) editRec.fields[fieldId] = { name: pos };
+  if (pos) editRec.fields[fieldId] = pos;
   else     delete editRec.fields[fieldId];
   renderGrid(roundGroups[activeRound] || []);
 
