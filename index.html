@@ -1734,12 +1734,11 @@ async function captureShare() {
       width: 380, logging: false,
     });
     canvas.toBlob(async (blob) => {
-      const roundPad = activeRound.replace(/^R(\d+)$/i, (_, n) => n.padStart(2, '0'));
       const dateStr = (info.date || '').slice(0, 10) || 'Unknown';
-      const fileName = `${dateStr} ${TEAM_NAME} Round ${roundPad} Game Plan.png`;
+      const fileName = `${dateStr}-${TEAM_NAME.replace(/\s+/g, '-')}-${activeRound.replace(/\s+/g, '-')}-Game-Plan.png`;
       const file = new File([blob], fileName, { type: 'image/png' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: `${TEAM_NAME} Round ${roundPad} Game Plan` });
+        await navigator.share({ files: [file], title: fileName.replace('.png', '') });
       } else {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
