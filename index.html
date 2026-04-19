@@ -403,13 +403,11 @@
     .pos-opt-Sub { background: var(--sub-bg); color: var(--sub); border-color: transparent; }
 
     .absent-chk {
-      height: 22px; flex-shrink: 0;
-      border: 1.5px solid var(--border); border-radius: 5px;
+      width: 26px; height: 26px; flex-shrink: 0;
+      border: 1.5px solid var(--border); border-radius: 6px;
       background: none; cursor: pointer;
-      display: flex; align-items: center;
-      padding: 0 6px;
-      font-size: 10px; font-weight: 700;
-      letter-spacing: 0.02em;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 900;
       transition: all 0.15s;
     }
     .absent-chk.present { color: #16a34a; border-color: #86efac; background: #f0fdf4; }
@@ -1032,7 +1030,7 @@ function renderGrid(records) {
       <td class="td-name">
         <div style="display:flex;align-items:center;gap:7px">
           <button class="absent-chk${absent ? ' absent' : ' present'}"
-            onclick="quickToggleAbsent('${rec.id}')" title="${absent ? 'Mark present' : 'Mark absent'}">${absent ? '✕ Absent' : 'Present'}</button>
+            onclick="quickToggleAbsent('${rec.id}')" title="${absent ? 'Mark present' : 'Mark absent'}">${absent ? '✕' : '✓'}</button>
           <button class="player-name-btn" onclick="openPlrSheet('${rec.id}')">
             ${esc(name)}
             ${hasNote ? `<span class="note-dot" title="Has notes"></span>` : ''}
