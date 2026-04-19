@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#1a3a5c">
+  <meta name="theme-color" content="#065f46">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Netball Game Planner</title>
@@ -12,15 +12,15 @@
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
     :root {
-      --navy: #1a3a5c;
-      --navy-dark: #112840;
-      --gold: #c8a020;
-      --bg: #f0f4f8;
+      --navy: #065f46;
+      --navy-dark: #064e3b;
+      --gold: #f59e0b;
+      --bg: #ecfdf5;
       --surface: #ffffff;
       --text: #111827;
       --muted: #6b7280;
-      --border: #e5e7eb;
-      --radius: 12px;
+      --border: #d1fae5;
+      --radius: 14px;
 
       --gs:  #dc2626; --gs-bg:  #fef2f2;
       --ga:  #ea580c; --ga-bg:  #fff7ed;
@@ -89,7 +89,7 @@
 
     /* ── Header ─────────────────────────────────────────────── */
     .header {
-      background: var(--navy);
+      background: linear-gradient(160deg, #057a55 0%, var(--navy-dark) 100%);
       padding: 10px 16px 8px;
       flex-shrink: 0;
     }
@@ -229,7 +229,7 @@
     }
 
     .grid thead th {
-      background: var(--navy);
+      background: linear-gradient(160deg, #057a55 0%, var(--navy-dark) 100%);
       color: rgba(255,255,255,0.85);
       font-size: 12px;
       font-weight: 700;
@@ -245,6 +245,7 @@
     .pos-opt.is-used { opacity: 0.28; cursor: not-allowed; pointer-events: none; }
 
     .grid tbody tr { border-bottom: 1px solid var(--border); }
+    .grid tbody tr:nth-child(even) { background: #f0fdf8; }
     .grid tbody tr:last-child { border-bottom: none; }
     .grid tbody tr.is-absent { background: repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(0,0,0,0.018) 6px, rgba(0,0,0,0.018) 12px); }
 
@@ -537,7 +538,7 @@
 
     /* Player rows become obvious tap targets when a card is picked */
     .pick-mode tbody tr:not(.is-absent) { cursor: pointer; }
-    .pick-mode tbody tr:not(.is-absent):active { background: rgba(26,58,92,0.07); }
+    .pick-mode tbody tr:not(.is-absent):active { background: rgba(6,95,70,0.07); }
 
     /* ── Compact capture card (off-screen render target) ── */
     #capture-wrap {
@@ -545,7 +546,7 @@
       width: 380px;
     }
     .cc { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; border-radius: 16px; overflow: hidden; width: 380px; }
-    .cc-header { background: #0f1c2e; padding: 16px 18px 14px; }
+    .cc-header { background: linear-gradient(135deg, #057a55 0%, #064e3b 100%); padding: 16px 18px 14px; }
     .cc-team { color: #f0b429; font-size: 20px; font-weight: 900; letter-spacing: -0.3px; margin-bottom: 5px; }
     .cc-round { color: rgba(255,255,255,0.95); font-size: 14px; font-weight: 700; margin-bottom: 3px; }
     .cc-meta { color: rgba(255,255,255,0.55); font-size: 12px; }
