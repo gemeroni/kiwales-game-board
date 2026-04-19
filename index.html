@@ -557,7 +557,7 @@
     .cc-grid th { font-size: 11px; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 0 10px; text-align: center; }
     .cc-grid th:first-child { text-align: left; }
     .cc-grid td { padding: 7px 0; text-align: center; vertical-align: middle; border-top: 1px solid #f3f4f6; }
-    .cc-grid td:first-child { text-align: left; font-size: 14px; font-weight: 600; color: #111827; }
+    .cc-grid td:first-child { text-align: left; font-size: 12px; font-weight: 600; color: #111827; }
     .cc-pill { display: block; width: 36px; height: 36px; box-sizing: border-box; margin: 0 auto; font-size: 11px; font-weight: 800; border-radius: 8px; line-height: 36px; text-align: center; overflow: hidden; }
     .cc-footer { background: #f9fafb; padding: 7px 14px; text-align: center; font-size: 10px; color: #9ca3af; font-weight: 500; }
   </style>
@@ -1701,9 +1701,8 @@ async function captureShare() {
 
   const rows = recs.map(rec => {
     const name = playerLabel(rec);
-    const shortName = name.split(' ')[0];
     return `<tr>
-      <td>${shortName}</td>
+      <td>${name}</td>
       <td>${pillHtml(rec.fields[QF.Q1])}</td>
       <td>${pillHtml(rec.fields[QF.Q2])}</td>
       <td>${pillHtml(rec.fields[QF.Q3])}</td>
