@@ -663,11 +663,12 @@
 
     <hr class="help-divider">
     <h3>Clearing assignments</h3>
-    <p>Tap a quarter tab (Q1-Q4) at the bottom to select it, then tap <strong>CLEAR</strong> to wipe all assignments for that quarter. No confirmation - it saves immediately.</p>
+    <p>Tap a quarter tab (Q1-Q4) at the bottom to select it, then tap <strong>CLEAR Q#</strong> to wipe that quarter's assignments. With no tab selected, the button becomes <strong>CLEAR ALL</strong> and wipes every quarter at once. No confirmation - saves immediately.</p>
 
     <hr class="help-divider">
     <h3>Absences</h3>
-    <p>Tick the checkbox next to a player's name to mark them absent. Their positions are automatically redistributed - to the fill-in player if available, or to Sub players. If 6 or fewer players remain active, WD is removed from the rotation and positions are recalculated.</p>
+    <p>Tap the <strong>✕</strong> button next to a player's name to mark them absent. Their positions are automatically redistributed - to the fill-in player if available, or to Sub players. If 6 or fewer players remain active, WD is removed from the rotation and positions are recalculated.</p>
+    <p><strong>Fill-in players</strong> are absent by default. Tap their <strong>✕</strong> button to mark them as available for the game.</p>
 
     <hr class="help-divider">
     <h3>Player notes</h3>
@@ -1012,13 +1013,13 @@ function renderGrid(records) {
   }
 
   const sorted = [...records].sort((a, b) => {
-    const aOut = !!a.fields[F.absent], bOut = !!b.fields[F.absent];
+    const aOut = isAbsent(a), bOut = isAbsent(b);
     if (aOut !== bOut) return aOut ? 1 : -1;
     return playerLabel(a).localeCompare(playerLabel(b));
   });
 
   tbody.innerHTML = sorted.map(rec => {
-    const absent  = !!rec.fields[F.absent];
+    const absent  = isAbsent(rec);
     const name    = playerLabel(rec);
     const hasNote = !!(rec.fields[F.notes] || '').trim();
     const q1 = rec.fields[F.q1] || null;
@@ -1220,7 +1221,7 @@ async function savePosition(pos) {
 function openPlrSheet(recId) {
   if (pickedPosition) { assignFromBucket(recId); return; }
   plrRec = allRecords.find(r => r.id === recId);
-  const absent  = !!plrRec.fields[F.absent];
+  const absent  = isAbsent(plrRec);
   const notes   = plrRec.fields[F.notes] || '';
 
   document.getElementById('pl-name').textContent = playerLabel(plrRec);
@@ -1254,7 +1255,7 @@ function closePlrSheet(e) {
 async function quickToggleAbsent(recId) {
   const rec = allRecords.find(r => r.id === recId);
   if (!rec) return;
-  await toggleAbsentRec(rec, !rec.fields[F.absent]);
+  await toggleAbsentRec(rec, !isAbsent(rec));
 }
 
 async function toggleAbsent(makeAbsent) {
@@ -1269,8 +1270,14 @@ function isFillIn(rec) {
   return /fill.?in/i.test(rec.fields[F.playerRound] || '');
 }
 
+// Fill-in players are absent by default (field unchecked = absent, checked = available).
+// Regular players are present by default (field unchecked = present, checked = absent).
+function isAbsent(rec) {
+  return isFillIn(rec) ? !rec.fields[F.absent] : !!rec.fields[F.absent];
+}
+
 function activeCount() {
-  return (roundGroups[activeRound] || []).filter(r => !r.fields[F.absent]).length;
+  return (roundGroups[activeRound] || []).filter(r => !isAbsent(r)).length;
 }
 
 async function cascadeAbsence(rec) {
@@ -1293,12 +1300,12 @@ async function cascadeAbsence(rec) {
     if (isFillIn(rec)) {
       // Fill In absent: push their positions to Sub players
       for (const [fid, pos] of Object.entries(posMap)) {
-        const sub = recs.find(r => !r.fields[F.absent] && r.id !== rec.id && r.fields[fid] === 'Sub');
+        const sub = recs.find(r => !isAbsent(r) && r.id !== rec.id && r.fields[fid] === 'Sub');
         if (sub) { sub.fields[fid] = pos; patch(sub, { [fid]: pos }); }
       }
     } else {
       // Regular player absent: push positions to Fill In
-      const fillIn = recs.find(r => isFillIn(r) && !r.fields[F.absent]);
+      const fillIn = recs.find(r => isFillIn(r) && !isAbsent(r));
       if (fillIn) {
         for (const [fid, pos] of Object.entries(posMap)) {
           fillIn.fields[fid] = pos;
@@ -1320,7 +1327,7 @@ async function cascadeAbsence(rec) {
   if (activeCount() <= 6) {
     for (const [, fid] of Object.entries(QF)) {
       for (const r of recs) {
-        if (!r.fields[F.absent] && r.fields[fid] === 'WD') {
+        if (!isAbsent(r) && r.fields[fid] === 'WD') {
           delete r.fields[fid];
           patch(r, { [fid]: null });
         }
@@ -1349,12 +1356,15 @@ async function cascadeAbsence(rec) {
 }
 
 async function toggleAbsentRec(rec, makeAbsent) {
-  rec.fields[F.absent] = makeAbsent || null;
+  // Fill-in: field true = available (present), null = absent by default.
+  // Regular: field true = absent, null = present by default.
+  const fieldValue = isFillIn(rec) ? (makeAbsent ? null : true) : (makeAbsent ? true : null);
+  rec.fields[F.absent] = fieldValue;
   renderGrid(roundGroups[activeRound] || []);
   try {
     await apiFetch(G_TABLE, `/${rec.id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ fields: { [F.absent]: makeAbsent || null } }),
+      body: JSON.stringify({ fields: { [F.absent]: fieldValue } }),
     });
     if (makeAbsent) {
       toast('Marked absent - reassigning positions...');
@@ -1431,7 +1441,7 @@ function buildPositionHistory() {
 
 function computeAutoAllocate(excludePos = []) {
   const history  = buildPositionHistory();
-  const recs     = (roundGroups[activeRound] || []).filter(r => !r.fields[F.absent]);
+  const recs     = (roundGroups[activeRound] || []).filter(r => !isAbsent(r));
   const changes  = [];
   const courtPos = POSITIONS.filter(p => p !== 'Sub' && !excludePos.includes(p));
 
@@ -1648,7 +1658,7 @@ const POS_STYLE = {
 
 async function captureShare() {
   if (!activeRound) { toast('No round selected'); return; }
-  const recs = (roundGroups[activeRound] || []).filter(r => !r.fields[F.absent]);
+  const recs = (roundGroups[activeRound] || []).filter(r => !isAbsent(r));
   const info = scheduleMap[activeRound] || {};
 
   const vs   = vsString(info.rival || '?', info.homeAway);
