@@ -1013,10 +1013,11 @@ function renderGrid(records) {
     return;
   }
 
+  const surname = rec => { const l = rec.fields[F.lastName]; return (Array.isArray(l) ? l[0] : l) || playerLabel(rec); };
   const sorted = [...records].sort((a, b) => {
     const aOut = isAbsent(a), bOut = isAbsent(b);
     if (aOut !== bOut) return aOut ? 1 : -1;
-    return playerLabel(a).localeCompare(playerLabel(b));
+    return surname(a).localeCompare(surname(b)) || playerLabel(a).localeCompare(playerLabel(b));
   });
 
   tbody.innerHTML = sorted.map(rec => {
