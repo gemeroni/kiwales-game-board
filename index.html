@@ -408,14 +408,12 @@
       background: none; cursor: pointer;
       display: flex; align-items: center;
       padding: 0 6px;
-      font-size: 10px; font-weight: 700; color: var(--muted);
+      font-size: 10px; font-weight: 700;
       letter-spacing: 0.02em;
       transition: all 0.15s;
     }
-    .absent-chk.checked {
-      background: #fee2e2; border-color: #dc2626; color: #dc2626;
-    }
-    .absent-chk.checked::before { content: '✕ '; }
+    .absent-chk.present { color: #16a34a; border-color: #86efac; background: #f0fdf4; }
+    .absent-chk.absent  { color: #dc2626; border-color: #dc2626; background: #fee2e2; }
 
     .btn-clear-pos {
       width: 100%; padding: 13px;
@@ -1033,8 +1031,8 @@ function renderGrid(records) {
     return `<tr class="${absent ? 'is-absent' : ''}" data-id="${rec.id}">
       <td class="td-name">
         <div style="display:flex;align-items:center;gap:7px">
-          <button class="absent-chk${absent ? ' checked' : ''}"
-            onclick="quickToggleAbsent('${rec.id}')" title="${absent ? 'Mark present' : 'Mark absent'}">Absent</button>
+          <button class="absent-chk${absent ? ' absent' : ' present'}"
+            onclick="quickToggleAbsent('${rec.id}')" title="${absent ? 'Mark present' : 'Mark absent'}">${absent ? '✕ Absent' : 'Present'}</button>
           <button class="player-name-btn" onclick="openPlrSheet('${rec.id}')">
             ${esc(name)}
             ${hasNote ? `<span class="note-dot" title="Has notes"></span>` : ''}
@@ -1274,12 +1272,12 @@ function isFillIn(rec) {
 }
 
 // Fill-in availability is tracked in localStorage (avoids Airtable field ambiguity).
-// Regular players use F.absent as a "Present" checkbox: true = present, null = absent.
+// Regular players use F.absent: true = absent, null = present.
 function fillInAvailKey(rec) { return `kw_avail_${rec.id}`; }
 function isAbsent(rec) {
   return isFillIn(rec)
     ? !localStorage.getItem(fillInAvailKey(rec))
-    : !rec.fields[F.absent];
+    : !!rec.fields[F.absent];
 }
 
 function activeCount() {
@@ -1375,7 +1373,7 @@ async function toggleAbsentRec(rec, makeAbsent) {
     }
     return;
   }
-  const fieldValue = makeAbsent ? null : true;
+  const fieldValue = makeAbsent ? true : null;
   rec.fields[F.absent] = fieldValue;
   renderGrid(roundGroups[activeRound] || []);
   try {
