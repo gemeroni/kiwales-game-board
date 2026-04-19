@@ -1015,6 +1015,8 @@ function renderGrid(records) {
 
   const surname = rec => { const l = rec.fields[F.lastName]; return (Array.isArray(l) ? l[0] : l) || playerLabel(rec); };
   const sorted = [...records].sort((a, b) => {
+    const aFill = isFillIn(a) ? 1 : 0, bFill = isFillIn(b) ? 1 : 0;
+    if (aFill !== bFill) return aFill - bFill;
     const aOut = isAbsent(a), bOut = isAbsent(b);
     if (aOut !== bOut) return aOut ? 1 : -1;
     return surname(a).localeCompare(surname(b)) || playerLabel(a).localeCompare(playerLabel(b));
