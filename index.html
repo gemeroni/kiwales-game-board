@@ -323,6 +323,9 @@
     }
     .empty-cell:active { border-color: var(--navy); color: var(--navy); }
 
+    .pill-bib { padding: 0; border-color: transparent !important; background: none !important; min-width: 38px; height: 38px; }
+    .cc-pill-bib { display: block; width: 36px; height: 36px; margin: 0 auto; }
+
     .pos-GS  { background: var(--gs);  color: #fff; border-color: transparent; }
     .pos-GA  { background: var(--ga);  color: #fff; border-color: transparent; }
     .pos-WA  { background: var(--wa);  color: #fff; border-color: transparent; }
@@ -723,6 +726,16 @@ const API       = `https://api.airtable.com/v0/${BASE}`;
 const TEAM_NAME = 'Kiwales Emerald';
 const TEAM_SET  = 'SET 3';
 
+const BIB_MAP = {
+  fire: { GS:'Red_GS_Fire', GA:'Orange_GA_Fire', WA:'Yellow_WA_Fire', C:'Green_C_Fire', WD:'Teal_WD_Fire', GD:'Blue_GD_Fire', GK:'Purple_GK_Fire' },
+  ice:  { GS:'Purple_GS_Ice', GA:'Blue_GA_Ice', WA:'Teal_WA_Ice', C:'Green_C_Ice', WD:'Yellow_WD_Ice', GD:'Orange_GD_Ice', GK:'Red_GK_Ice' }
+};
+let bibTheme = 'fire';
+function bibImg(pos, size) {
+  const name = BIB_MAP[bibTheme]?.[pos];
+  return name ? `<img src="bibs/${name}.svg" width="${size}" height="${size}" alt="${pos}" style="display:block">` : null;
+}
+
 const F = {
   playerRound : 'fldJ8iosCsMqDvS64',
   player      : 'fldFLYdtgwR6Icz3T',
@@ -955,6 +968,7 @@ function onRoundChange(roundName) {
   activeBucketQ = null;
   updateClearLabel();
   const info = scheduleMap[roundName] || {};
+  bibTheme = (info.homeAway || '').toLowerCase().includes('away') ? 'ice' : 'fire';
 
   // Meta line: SET 3 · Round 01 · Kiwales Emerald VS Warriors Pandas · Friday 1 May 2026 · 4:30pm
   const metaParts = [TEAM_SET, roundName];
@@ -1054,12 +1068,17 @@ function renderGrid(records) {
 
 function cell(rec, q, pos, absent) {
   if (absent) {
-    return pos
-      ? `<span class="pill pos-${pos}" style="opacity:0.35;cursor:default">${pos}</span>`
-      : `<span style="color:var(--border);font-size:18px">–</span>`;
+    if (!pos) return `<span style="color:var(--border);font-size:18px">–</span>`;
+    const bib = bibImg(pos, 38);
+    return bib
+      ? `<span class="pill pill-bib" style="opacity:0.35;cursor:default">${bib}</span>`
+      : `<span class="pill pos-${pos}" style="opacity:0.35;cursor:default">${pos}</span>`;
   }
   if (pos) {
-    return `<span class="pill pos-${pos}" onclick="openPosSheet('${rec.id}','${q}')">${pos}</span>`;
+    const bib = bibImg(pos, 38);
+    return bib
+      ? `<span class="pill pill-bib" onclick="openPosSheet('${rec.id}','${q}')">${bib}</span>`
+      : `<span class="pill pos-${pos}" onclick="openPosSheet('${rec.id}','${q}')">${pos}</span>`;
   }
   return `<span class="empty-cell" onclick="openPosSheet('${rec.id}','${q}')">+</span>`;
 }
@@ -1695,6 +1714,8 @@ async function captureShare() {
 
   const pillHtml = (pos) => {
     if (!pos) return '<span style="color:#d1d5db;font-size:11px">—</span>';
+    const bib = bibImg(pos, 36);
+    if (bib) return `<span class="cc-pill-bib">${bib}</span>`;
     const s = POS_STYLE[pos] || { bg: '#e5e7eb', color: '#374151' };
     return `<span class="cc-pill" style="background:${s.bg};color:${s.color}">${pos}</span>`;
   };
